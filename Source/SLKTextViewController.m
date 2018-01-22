@@ -935,6 +935,9 @@ CGFloat const SLKAutoCompletionViewDefaultHeight = 140.0;
     }
 }
 
+- (void)rebindRightButton {
+    [_textInputbar.rightButton addTarget:self action:@selector(didPressRightButton:) forControlEvents:UIControlEventTouchUpInside];
+}
 
 #pragma mark - Private Methods
 
