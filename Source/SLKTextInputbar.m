@@ -15,6 +15,8 @@
 
 #import "SLKUIConstants.h"
 
+@import os.log;
+
 NSString * const SLKTextInputbarDidMoveNotification =   @"SLKTextInputbarDidMoveNotification";
 
 @interface SLKTextInputbar ()
@@ -95,9 +97,8 @@ NSString * const SLKTextInputbarDidMoveNotification =   @"SLKTextInputbarDidMove
     [self addSubview:self.charCountLabel];
     [self addSubview:self.contentView];
 
-    [self slk_setupViewConstraints];
-    [self slk_updateConstraintConstants];
-    
+    [self configure];
+
     self.counterStyle = SLKCounterStyleNone;
     self.counterPosition = SLKCounterPositionTop;
     
@@ -106,6 +107,11 @@ NSString * const SLKTextInputbarDidMoveNotification =   @"SLKTextInputbarDidMove
     [self slk_registerTo:self.layer forSelector:@selector(position)];
     [self slk_registerTo:self.leftButton.imageView forSelector:@selector(image)];
     [self slk_registerTo:self.rightButton.titleLabel forSelector:@selector(font)];
+}
+
+- (void)configure {
+    [self slk_setupViewConstraints];
+    [self slk_updateConstraintConstants];
 }
 
 
@@ -141,17 +147,7 @@ NSString * const SLKTextInputbarDidMoveNotification =   @"SLKTextInputbarDidMove
         
         _textView = [[class alloc] init];
         _textView.translatesAutoresizingMaskIntoConstraints = NO;
-        _textView.font = [UIFont systemFontOfSize:15.0];
         _textView.maxNumberOfLines = [self slk_defaultNumberOfLines];
-        
-        _textView.keyboardType = UIKeyboardTypeTwitter;
-        _textView.returnKeyType = UIReturnKeyDefault;
-        _textView.enablesReturnKeyAutomatically = YES;
-        _textView.scrollIndicatorInsets = UIEdgeInsetsMake(0.0, -1.0, 0.0, 1.0);
-        _textView.textContainerInset = UIEdgeInsetsMake(8.0, 4.0, 8.0, 0.0);
-        _textView.layer.cornerRadius = 5.0;
-        _textView.layer.borderWidth = 0.5;
-        _textView.layer.borderColor =  [UIColor colorWithRed:200.0/255.0 green:200.0/255.0 blue:205.0/255.0 alpha:1.0].CGColor;
     }
     return _textView;
 }
@@ -316,11 +312,10 @@ NSString * const SLKTextInputbarDidMoveNotification =   @"SLKTextInputbarDidMove
     if (self.textView.numberOfLines == 1) {
         height = minimumHeight;
     }
-    else if (self.textView.numberOfLines < self.textView.maxNumberOfLines) {
-        height = [self slk_inputBarHeightForLines:self.textView.numberOfLines];
-    }
     else {
-        height = [self slk_inputBarHeightForLines:self.textView.maxNumberOfLines];
+        height = self.textView.appropriateHeight;
+        height += self.contentInset.top;
+        height += self.slk_bottomMargin;
     }
     
     if (height < minimumHeight) {
@@ -684,6 +679,24 @@ NSString * const SLKTextInputbarDidMoveNotification =   @"SLKTextInputbarDidMove
     
     self.rightButtonTopMarginC = [self slk_constraintForAttribute:NSLayoutAttributeTop firstItem:self.rightButton secondItem:self];
     self.rightButtonBottomMarginC = [self slk_constraintForAttribute:NSLayoutAttributeBottom firstItem:self secondItem:self.rightButton];
+
+    NSArray *constraints = @[
+                             self.textViewBottomMarginC,
+                             self.rightButtonWC,
+                             self.leftMarginWC,
+                             self.leftButtonBottomMarginC,
+                             self.leftButtonHC,
+                             self.leftButtonWC,
+                             self.contentViewHC,
+                             self.editorContentViewHC,
+                             self.rightMarginWC,
+                             self.rightButtonTopMarginC,
+                             self.rightButtonBottomMarginC];
+
+    for (NSLayoutConstraint *constraint in constraints) {
+        os_log(OS_LOG_DEFAULT, "id: %@, constraint: %@", constraint.identifier, constraint);
+    }
+
 }
 
 - (void)slk_updateConstraintConstants
@@ -747,7 +760,7 @@ NSString * const SLKTextInputbarDidMoveNotification =   @"SLKTextInputbarDidMove
 - (void)observeValueForKeyPath:(NSString *)keyPath ofObject:(id)object change:(NSDictionary *)change context:(void *)context
 {
     if ([object isEqual:self.layer] && [keyPath isEqualToString:NSStringFromSelector(@selector(position))]) {
-        
+
         if (!CGPointEqualToPoint(self.previousOrigin, self.frame.origin)) {
             self.previousOrigin = self.frame.origin;
             [[NSNotificationCenter defaultCenter] postNotificationName:SLKTextInputbarDidMoveNotification object:self userInfo:@{@"origin": [NSValue valueWithCGPoint:self.previousOrigin]}];

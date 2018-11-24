@@ -181,6 +181,11 @@ NS_CLASS_AVAILABLE_IOS(7_0) @interface SLKTextViewController : UIViewController 
  */
 + (UICollectionViewLayout *)collectionViewLayoutForCoder:(NSCoder *)decoder;
 
+/**
+ Presents a customiztion hook so that clients can customize text input bar. You should
+ call super at some point in your implementation
+ */
+- (void)setupTextInputBar:(SLKTextInputbar *)textInputbar;
 
 #pragma mark - Keyboard Handling
 ///------------------------------------------------

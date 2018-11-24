@@ -11,6 +11,8 @@
 
 #import "SLKUIConstants.h"
 
+@import os.log;
+
 NSString * const SLKTextViewTextWillChangeNotification =            @"SLKTextViewTextWillChangeNotification";
 NSString * const SLKTextViewContentSizeDidChangeNotification =      @"SLKTextViewContentSizeDidChangeNotification";
 NSString * const SLKTextViewSelectedRangeDidChangeNotification =    @"SLKTextViewSelectedRangeDidChangeNotification";
@@ -85,10 +87,23 @@ static NSString *const SLKTextViewGenericFormattingSelectorPrefix = @"slk_format
     self.dataDetectorTypes = UIDataDetectorTypeNone;
     
     [self slk_registerNotifications];
+
+    [self configureAppearance];
     
     [self addObserver:self forKeyPath:NSStringFromSelector(@selector(contentSize)) options:NSKeyValueObservingOptionNew context:NULL];
 }
 
+- (void)configureAppearance {
+    self.font = [UIFont systemFontOfSize:15.0];
+    self.keyboardType = UIKeyboardTypeTwitter;
+    self.returnKeyType = UIReturnKeyDefault;
+    self.enablesReturnKeyAutomatically = YES;
+    self.scrollIndicatorInsets = UIEdgeInsetsMake(0.0, -1.0, 0.0, 1.0);
+    self.textContainerInset = UIEdgeInsetsMake(8.0, 4.0, 8.0, 0.0);
+    self.layer.cornerRadius = 5.0;
+    self.layer.borderWidth = 0.5;
+    self.layer.borderColor =  [UIColor colorWithRed:200.0/255.0 green:200.0/255.0 blue:205.0/255.0 alpha:1.0].CGColor;
+}
 
 #pragma mark - UIView Overrides
 
@@ -165,28 +180,40 @@ static NSString *const SLKTextViewGenericFormattingSelectorPrefix = @"slk_format
     return self.placeholderLabel.font;
 }
 
+- (CGFloat)appropriateHeight
+{
+    NSUInteger numberOfLines = self.numberOfLines > self.maxNumberOfLines ? self.maxNumberOfLines : self.numberOfLines;
+    CGFloat height = [self intrinsicContentSize].height;
+    height -= self.font.lineHeight;
+    height += roundf(self.font.lineHeight*numberOfLines);
+
+    return height;
+}
+
 - (NSUInteger)numberOfLines
 {
     CGSize contentSize = self.contentSize;
-    
+
     CGFloat contentHeight = contentSize.height;
     contentHeight -= self.textContainerInset.top + self.textContainerInset.bottom;
-    
+
     NSUInteger lines = fabs(contentHeight/self.font.lineHeight);
-    
+
     // This helps preventing the content's height to be larger that the bounds' height
     // Avoiding this way to have unnecessary scrolling in the text view when there is only 1 line of content
     if (lines == 1 && contentSize.height > self.bounds.size.height) {
         contentSize.height = self.bounds.size.height;
         self.contentSize = contentSize;
     }
-    
+
     // Let's fallback to the minimum line count
     if (lines == 0) {
         lines = 1;
     }
-    
+
     return lines;
+
+    //  return 1;
 }
 
 - (NSUInteger)maxNumberOfLines
@@ -1098,8 +1125,7 @@ typedef void (^SLKKeyCommandHandler)(UIKeyCommand *keyCommand);
 }
 
 - (BOOL)slk_isNewVerticalMovementForPosition:(UITextPosition *)position inDirection:(UITextLayoutDirection)direction
-{
-    CGRect caretRect = [self caretRectForPosition:position];
+{    CGRect caretRect = [self caretRectForPosition:position];
     BOOL noPreviousStartPosition = CGRectEqualToRect(self.verticalMoveStartCaretRect, CGRectZero);
     BOOL caretMovedSinceLastPosition = !CGRectEqualToRect(caretRect, self.verticalMoveLastCaretRect);
     BOOL directionChanged = self.verticalMoveDirection != direction;

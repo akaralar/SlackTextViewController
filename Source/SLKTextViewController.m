@@ -11,6 +11,7 @@
 
 #import "UIResponder+SLKAdditions.h"
 #import "SLKUIConstants.h"
+@import os.log;
 
 /** Feature flagged while waiting to implement a more reliable technique. */
 #define SLKBottomPanningEnabled 0
@@ -68,6 +69,7 @@ CGFloat const SLKAutoCompletionViewDefaultHeight = 140.0;
 @synthesize autoCompleting = _autoCompleting;
 @synthesize scrollViewProxy = _scrollViewProxy;
 @synthesize presentedInPopover = _presentedInPopover;
+@synthesize verticalPanGesture = _verticalPanGesture;
 
 #pragma mark - Initializer
 
@@ -314,23 +316,35 @@ CGFloat const SLKAutoCompletionViewDefaultHeight = 140.0;
 
 - (SLKTextInputbar *)textInputbar
 {
-    if (!_textInputbar) {
-        _textInputbar = [[SLKTextInputbar alloc] initWithTextViewClass:self.textViewClass];
-        _textInputbar.translatesAutoresizingMaskIntoConstraints = NO;
-        
-        [_textInputbar.leftButton addTarget:self action:@selector(didPressLeftButton:) forControlEvents:UIControlEventTouchUpInside];
-        [_textInputbar.rightButton addTarget:self action:@selector(didPressRightButton:) forControlEvents:UIControlEventTouchUpInside];
-        [_textInputbar.editorLeftButton addTarget:self action:@selector(didCancelTextEditing:) forControlEvents:UIControlEventTouchUpInside];
-        [_textInputbar.editorRightButton addTarget:self action:@selector(didCommitTextEditing:) forControlEvents:UIControlEventTouchUpInside];
-        
-        _textInputbar.textView.delegate = self;
-        
+    // should be overridden
+    return nil;
+//    if (!_textInputbar) {
+//        _textInputbar = [[SLKTextInputbar alloc] initWithTextViewClass:self.textViewClass];
+//    }
+//    return _textInputbar;
+}
+
+- (void)setupTextInputBar:(SLKTextInputbar *)textInputbar {
+    textInputbar.translatesAutoresizingMaskIntoConstraints = NO;
+
+    [textInputbar.leftButton addTarget:self action:@selector(didPressLeftButton:) forControlEvents:UIControlEventTouchUpInside];
+    [textInputbar.rightButton addTarget:self action:@selector(didPressRightButton:) forControlEvents:UIControlEventTouchUpInside];
+    [textInputbar.editorLeftButton addTarget:self action:@selector(didCancelTextEditing:) forControlEvents:UIControlEventTouchUpInside];
+    [textInputbar.editorRightButton addTarget:self action:@selector(didCommitTextEditing:) forControlEvents:UIControlEventTouchUpInside];
+
+    textInputbar.textView.delegate = self;
+
+    [textInputbar addGestureRecognizer:self.verticalPanGesture];
+
+}
+
+- (UIPanGestureRecognizer *)verticalPanGesture {
+    if (!_verticalPanGesture) {
         _verticalPanGesture = [[UIPanGestureRecognizer alloc] initWithTarget:self action:@selector(slk_didPanTextInputBar:)];
         _verticalPanGesture.delegate = self;
-        
-        [_textInputbar addGestureRecognizer:self.verticalPanGesture];
     }
-    return _textInputbar;
+
+    return _verticalPanGesture;
 }
 
 - (UIView <SLKTypingIndicatorProtocol> *)typingIndicatorProxyView
@@ -362,22 +376,22 @@ CGFloat const SLKAutoCompletionViewDefaultHeight = 140.0;
 
 - (BOOL)isTextInputbarHidden
 {
-    return _textInputbar.hidden;
+    return self.textInputbar.hidden;
 }
 
 - (SLKTextView *)textView
 {
-    return _textInputbar.textView;
+    return self.textInputbar.textView;
 }
 
 - (UIButton *)leftButton
 {
-    return _textInputbar.leftButton;
+    return self.textInputbar.leftButton;
 }
 
 - (UIButton *)rightButton
 {
-    return _textInputbar.rightButton;
+    return self.textInputbar.rightButton;
 }
 
 - (UIModalPresentationStyle)modalPresentationStyle
@@ -584,11 +598,11 @@ CGFloat const SLKAutoCompletionViewDefaultHeight = 140.0;
 - (void)setBounces:(BOOL)bounces
 {
     _bounces = bounces;
-    _textInputbar.bounces = bounces;
+    self.textInputbar.bounces = bounces;
 }
 
 - (void)slk_updateInsetAdjustmentBehavior
-    {
+{
         // Deactivate automatic scrollView adjustment for inverted table view
         if (@available(iOS 11.0, *)) {
             if (self.isInverted) {
@@ -686,10 +700,10 @@ CGFloat const SLKAutoCompletionViewDefaultHeight = 140.0;
         return;
     }
     
-    CGFloat inputbarHeight = _textInputbar.appropriateHeight;
+    CGFloat inputbarHeight = self.textInputbar.appropriateHeight;
     
-    _textInputbar.rightButton.enabled = [self canPressRightButton];
-    _textInputbar.editorRightButton.enabled = [self canPressRightButton];
+    self.textInputbar.rightButton.enabled = [self canPressRightButton];
+    self.textInputbar.editorRightButton.enabled = [self canPressRightButton];
     
     if (inputbarHeight != self.textInputbarHC.constant)
     {
@@ -751,7 +765,7 @@ CGFloat const SLKAutoCompletionViewDefaultHeight = 140.0;
 {
     NSString *text = [self.textView.text stringByTrimmingCharactersInSet:[NSCharacterSet whitespaceAndNewlineCharacterSet]];
     
-    if (text.length > 0 && ![_textInputbar limitExceeded]) {
+    if (text.length > 0 && ![self.textInputbar limitExceeded]) {
         return YES;
     }
     
@@ -782,14 +796,14 @@ CGFloat const SLKAutoCompletionViewDefaultHeight = 140.0;
 
 - (void)editAttributedText:(NSAttributedString *)attributedText
 {
-    if (![_textInputbar canEditText:attributedText.string]) {
+    if (![self.textInputbar canEditText:attributedText.string]) {
         return;
     }
     
     // Caches the current text, in case the user cancels the edition
     [self slk_cacheAttributedTextToDisk:self.textView.attributedText];
     
-    [_textInputbar beginTextEditing];
+    [self.textInputbar beginTextEditing];
     
     // Setting the text after calling -beginTextEditing is safer
     [self.textView setAttributedText:attributedText];
@@ -802,11 +816,11 @@ CGFloat const SLKAutoCompletionViewDefaultHeight = 140.0;
 
 - (void)didCommitTextEditing:(id)sender
 {
-    if (!_textInputbar.isEditing) {
+    if (!self.textInputbar.isEditing) {
         return;
     }
     
-    [_textInputbar endTextEdition];
+    [self.textInputbar endTextEdition];
     
     // Clears the text and but not the undo manager
     [self.textView slk_clearText:NO];
@@ -814,11 +828,11 @@ CGFloat const SLKAutoCompletionViewDefaultHeight = 140.0;
 
 - (void)didCancelTextEditing:(id)sender
 {
-    if (!_textInputbar.isEditing) {
+    if (!self.textInputbar.isEditing) {
         return;
     }
     
-    [_textInputbar endTextEdition];
+    [self.textInputbar endTextEdition];
     
     // Clears the text and but not the undo manager
     [self.textView slk_clearText:NO];
@@ -830,7 +844,7 @@ CGFloat const SLKAutoCompletionViewDefaultHeight = 140.0;
 - (BOOL)canShowTypingIndicator
 {
     // Don't show if the text is being edited or auto-completed.
-    if (_textInputbar.isEditing || self.isAutoCompleting) {
+    if (self.textInputbar.isEditing || self.isAutoCompleting) {
         return NO;
     }
     
@@ -905,7 +919,7 @@ CGFloat const SLKAutoCompletionViewDefaultHeight = 140.0;
         return;
     }
     
-    _textInputbar.hidden = hidden;
+    self.textInputbar.hidden = hidden;
 
     if (@available(iOS 11.0, *)) {
         [self viewSafeAreaInsetsDidChange];
@@ -959,7 +973,7 @@ CGFloat const SLKAutoCompletionViewDefaultHeight = 140.0;
     static BOOL dragging = NO;
     static BOOL presenting = NO;
     
-    __block UIView *keyboardView = [_textInputbar.inputAccessoryView keyboardViewProxy];
+    __block UIView *keyboardView = [self.textInputbar.inputAccessoryView keyboardViewProxy];
     
     // When no keyboard view has been detecting, let's skip any handling.
     if (!keyboardView) {
@@ -992,7 +1006,7 @@ CGFloat const SLKAutoCompletionViewDefaultHeight = 140.0;
         
         presenting = YES;
 #else
-        if ([gesture.view isEqual:_textInputbar] && gestureVelocity.y < 0) {
+        if ([gesture.view isEqual:self.textInputbar] && gestureVelocity.y < 0) {
             [self presentKeyboard:YES];
         }
         return;
@@ -1010,7 +1024,7 @@ CGFloat const SLKAutoCompletionViewDefaultHeight = 140.0;
                 [self presentKeyboard:NO];
                 
                 // So we can capture the keyboard's view
-                keyboardView = [_textInputbar.inputAccessoryView keyboardViewProxy];
+                keyboardView = [self.textInputbar.inputAccessoryView keyboardViewProxy];
                 
                 originalFrame = keyboardView.frame;
                 originalFrame.origin.y = CGRectGetMaxY(self.view.frame);
@@ -1024,7 +1038,7 @@ CGFloat const SLKAutoCompletionViewDefaultHeight = 140.0;
         }
         case UIGestureRecognizerStateChanged: {
             
-            if (CGRectContainsPoint(_textInputbar.frame, gestureLocation) || dragging || presenting){
+            if (CGRectContainsPoint(self.textInputbar.frame, gestureLocation) || dragging || presenting){
                 
                 if (CGPointEqualToPoint(startPoint, CGPointZero)) {
                     startPoint = gestureLocation;
@@ -1329,7 +1343,7 @@ CGFloat const SLKAutoCompletionViewDefaultHeight = 140.0;
 
 - (void)didPressReturnKey:(UIKeyCommand *)keyCommand
 {
-    if (_textInputbar.isEditing) {
+    if (self.textInputbar.isEditing) {
         [self didCommitTextEditing:keyCommand];
     }
     else {
@@ -1342,7 +1356,7 @@ CGFloat const SLKAutoCompletionViewDefaultHeight = 140.0;
     if (self.isAutoCompleting) {
         [self cancelAutoCompletion];
     }
-    else if (_textInputbar.isEditing) {
+    else if (self.textInputbar.isEditing) {
         [self didCancelTextEditing:keyCommand];
     }
    
@@ -2280,7 +2294,7 @@ CGFloat const SLKAutoCompletionViewDefaultHeight = 140.0;
     self.scrollViewHC.constant = [self slk_appropriateScrollViewHeight];
     self.keyboardHC.constant = [self slk_appropriateKeyboardHeightFromRect:CGRectNull];
     
-    if (_textInputbar.isEditing) {
+    if (self.textInputbar.isEditing) {
         self.textInputbarHC.constant += self.textInputbar.editorContentViewHeight;
     }
     

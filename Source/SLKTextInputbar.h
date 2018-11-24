@@ -78,6 +78,12 @@ NS_ASSUME_NONNULL_BEGIN
 - (instancetype)initWithTextViewClass:(Class)textViewClass;
 
 
+/**
+ Provides a hook for subclasses to configure themselves. Add subviews and create constraints
+ here
+ */
+- (void)configure;
+
 #pragma mark - Text Editing
 ///------------------------------------------------
 /// @name Text Editing

@@ -53,6 +53,9 @@ UIKIT_EXTERN NSString * const SLKTextViewPastedItemData;
 /** The placeholder's font. Default is the textView's font. */
 @property (nonatomic, copy, null_resettable) UIFont *placeholderFont;
 
+/** Height being multiplication of number of lines and font's line height. */
+@property(nonatomic, readonly) CGFloat appropriateHeight;
+
 /** The maximum number of lines before enabling scrolling. Default is 0 wich means limitless.
  If dynamic type is enabled, the maximum number of lines will be calculated proportionally to the user preferred font size. */
 @property (nonatomic, readwrite) NSUInteger maxNumberOfLines;
@@ -102,6 +105,12 @@ UIKIT_EXTERN NSString * const SLKTextViewPastedItemData;
  */
 - (void)didPressArrowKey:(UIKeyCommand *)keyCommand;
 
+
+/**
+ Lets the text view to configure itself, and allows subclasses to override
+ this method as a customization point
+ */
+- (void)configureAppearance;
 
 #pragma mark - Markdown Formatting
 
