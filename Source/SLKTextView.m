@@ -132,14 +132,27 @@ static NSString *const SLKTextViewGenericFormattingSelectorPrefix = @"slk_format
 - (void)layoutSubviews
 {
     [super layoutSubviews];
-    
+
+    BOOL debug = false;
+
     self.placeholderLabel.hidden = [self slk_shouldHidePlaceholder];
-    
     if (!self.placeholderLabel.hidden) {
-        
         [UIView performWithoutAnimation:^{
-            self.placeholderLabel.frame = [self slk_placeholderRectThatFits:self.bounds];
+
+            if (debug) {
+                os_log(OS_LOG_DEFAULT, "bounds: %@", NSStringFromCGRect(self.bounds));
+
+                os_log(OS_LOG_DEFAULT, "content insets for placeholder: %@", NSStringFromUIEdgeInsets(self.contentInset));
+            }
+
+            CGRect textRect = UIEdgeInsetsInsetRect(self.bounds, self.contentInset);
+
+            self.placeholderLabel.frame = [self slk_placeholderRectThatFits:textRect];
             [self sendSubviewToBack:self.placeholderLabel];
+
+            if (debug) {
+                os_log(OS_LOG_DEFAULT, "text container inset(placeholder): %@", NSStringFromUIEdgeInsets(self.textContainerInset));
+            }
         }];
     }
 }
